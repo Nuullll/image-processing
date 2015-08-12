@@ -1,6 +1,6 @@
 %% Load images
 load('resource/hall.mat');
-imwrite(hall_color,'images/hall_color.png');    % save original image
+imwrite(hall_color,'images/hall_color.png');
 hall_color = double(hall_color);
 
 %% Draw red circle
@@ -15,9 +15,9 @@ area = ((I-center(1)).^2 + (J-center(2)).^2 <= radius^2);
 
 cell = mat2cell(hall_color,ones(1,height),ones(1,width),3);
 cell(area) = {reshape([255,0,0],1,1,3)};
-hall_color = cell2mat(cell);
+hall_color_red_circle = cell2mat(cell);
 
 %% Write image
-hall_color = uint8(hall_color);
-imwrite(hall_color,'images/hall_color_red_circle.png');
+hall_color_red_circle = uint8(hall_color_red_circle);
+imwrite(hall_color_red_circle,'images/hall_color_red_circle.png');
 

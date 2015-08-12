@@ -60,8 +60,6 @@
                     \hline
                     \textbf{函数名} & \textbf{功能} \\
                     \hline
-                        \texttt{im2double} & 将图像像素值转为\texttt{double}型 \\
-                    \hline
                         \texttt{imshow} & 在\texttt{figure}中显示图像 \\
                     \hline
                         \texttt{rgb2gray} & 将彩色图像转换为灰度值图像 \\
@@ -103,9 +101,46 @@
                         \end{figure}
 
                     \item 将测试图像涂成国际象棋状的“黑白格”的样子，其中“黑”即黑色，“白”则意味着\textbf{保留原图}。
+
+                        \textbf{思路：}\texttt{chess\_mask}函数提供棋盘行列数接口，计算出每块的大小，同样利用\texttt{meshgrid}函数确定出\texttt{black\_mask}的位置，将图像对应位置赋为黑色。
+
+                        \begin{listing}[H]
+                            \caption{\texttt{chess\_mask.m}}
+                            \label{listing:chess_mask}
+                            \inputminted[bgcolor=bg, linenos, fontsize=\footnotesize]{matlab}{../chess_mask.m}
+                        \end{listing}
+
+                        按如下代码生成\texttt{64}格和\texttt{32}格棋盘蒙版
+
+                        \begin{minted}[bgcolor=bg, fontsize=\footnotesize]{matlab}
+>> imwrite(chess_mask(hall_color,8,8),...
+    'images/hall_color_masked_8_8.png')
+>> imwrite(chess_mask(hall_color,4,8),...
+    'images/hall_color_masked_4_8.png')
+                        \end{minted}
+
+                        \begin{figure}[H]
+                            \centering
+                                \begin{subfigure}{0.3\textwidth}
+                                    \includegraphics[width=\linewidth]{hall_color_masked_8_8}
+                                    \caption{$8\times8$蒙版}
+                                    \label{fig:hall_color_masked_8_8}
+                                \end{subfigure}
+
+                                \begin{subfigure}{0.3\textwidth}
+                                    \includegraphics[width=\linewidth]{hall_color_masked_4_8}
+                                    \caption{$4\times8$蒙版}
+                                    \label{fig:hall_color_masked_4_8}
+                                \end{subfigure}
+
+                            \caption{国际象棋蒙版}
+                            \label{fig:chess_mask}
+                        \end{figure}
+
                 \end{enumerate}
 
-                用一种看图软件浏览上述两个图，看是否达到了目标。
+                用看图软件浏览上述生成图片，达到预期效果。
+
         \end{enumerate}
     
     % section 基础知识 (end)
