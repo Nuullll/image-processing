@@ -5,23 +5,38 @@
 
 % monokai code
 \usepackage{color}
-\definecolor{bg}{rgb}{0.152941, 0.156863, 0.133333} 
 \usepackage{minted}
-\usemintedstyle{monokai}
+\usemintedstyle{manni}
+\setminted{
+    linenos,
+    fontsize=\footnotesize,
+    resetmargins
+}
 
 % insert images
 \usepackage{graphicx}
 \graphicspath{{images/}{../images/}}
 \usepackage{amsmath}
+\usepackage{caption}
 \numberwithin{figure}{section}
 \numberwithin{table}{section}
 \numberwithin{listing}{section}
+\numberwithin{equation}{section}
 
 \usepackage{subcaption}
 
 % hyperlink
 \usepackage{hyperref}
+\usepackage{xcolor}
+\hypersetup{
+    colorlinks,
+    linkcolor={red!50!black},
+    citecolor={blue!50!black},
+    urlcolor={blue!80!black}
+}
 
+% auto newline in table
+\newcommand{\tabincell}[2]{\begin{tabular}{@{}#1@{}}#2\end{tabular}}
 \usepackage{multirow}
 
 \author{郭一隆(2013011189)}
@@ -35,9 +50,7 @@
 
     \listoffigures
     \listoftables
-    \newpage
-
-    \renewcommand\listoflistingscaption{List of source codes}
+    \renewcommand\listoflistingscaption{List of Source Codes}
     \listoflistings
     \newpage
 
@@ -79,19 +92,20 @@
                         \begin{listing}[H]
                             \caption{\texttt{draw\_circle.m}}
                             \label{listing:draw_circle}
-                            \inputminted[bgcolor=bg, linenos, fontsize=\footnotesize]{matlab}{../draw_circle.m}
+                            \inputminted{matlab}{../draw_circle.m}
                         \end{listing}
 
                         \begin{figure}[H]
                             \centering
-                                \begin{subfigure}{0.3\textwidth}
-                                    \includegraphics[width=\linewidth]{hall_color}
+                                \begin{subfigure}{0.5\textwidth}
+                                    \centering
+                                    \includegraphics[width=0.4\linewidth]{hall_color}
                                     \caption{处理前}
                                     \label{fig:hall_color}
-                                \end{subfigure}
-
-                                \begin{subfigure}{0.3\textwidth}
-                                    \includegraphics[width=\linewidth]{hall_color_red_circle}
+                                \end{subfigure}%
+                                \begin{subfigure}{0.5\textwidth}
+                                    \centering
+                                    \includegraphics[width=0.4\linewidth]{hall_color_red_circle}
                                     \caption{处理后}
                                     \label{fig:hall_color_red_circle}
                                 \end{subfigure}
@@ -107,28 +121,27 @@
                         \begin{listing}[H]
                             \caption{\texttt{chess\_mask.m}}
                             \label{listing:chess_mask}
-                            \inputminted[bgcolor=bg, linenos, fontsize=\footnotesize]{matlab}{../chess_mask.m}
+                            \inputminted{matlab}{../chess_mask.m}
                         \end{listing}
 
                         按如下代码生成\texttt{64}格和\texttt{32}格棋盘蒙版
 
-                        \begin{minted}[bgcolor=bg, fontsize=\footnotesize]{matlab}
->> imwrite(chess_mask(hall_color,8,8),...
-    'images/hall_color_masked_8_8.png')
->> imwrite(chess_mask(hall_color,4,8),...
-    'images/hall_color_masked_4_8.png')
+                        \begin{minted}{matlab}
+>> imwrite(chess_mask(hall_color,8,8),'images/hall_color_masked_8_8.png')
+>> imwrite(chess_mask(hall_color,4,8),'images/hall_color_masked_4_8.png')
                         \end{minted}
 
                         \begin{figure}[H]
                             \centering
-                                \begin{subfigure}{0.3\textwidth}
-                                    \includegraphics[width=\linewidth]{hall_color_masked_8_8}
+                                \begin{subfigure}{0.5\textwidth}
+                                    \centering
+                                    \includegraphics[width=0.4\linewidth]{hall_color_masked_8_8}
                                     \caption{$8\times8$蒙版}
                                     \label{fig:hall_color_masked_8_8}
-                                \end{subfigure}
-
-                                \begin{subfigure}{0.3\textwidth}
-                                    \includegraphics[width=\linewidth]{hall_color_masked_4_8}
+                                \end{subfigure}%
+                                \begin{subfigure}{0.5\textwidth}
+                                    \centering
+                                    \includegraphics[width=0.4\linewidth]{hall_color_masked_4_8}
                                     \caption{$4\times8$蒙版}
                                     \label{fig:hall_color_masked_4_8}
                                 \end{subfigure}
@@ -139,10 +152,233 @@
 
                 \end{enumerate}
 
-                用看图软件浏览上述生成图片，达到预期效果。
+                用看图软件浏览上述生成图片，预览效果如图\ref{fig:red_circle}和图\ref{fig:chess_mask}，达到预期效果。
 
         \end{enumerate}
     
     % section 基础知识 (end)
+
+    \section{图像压缩编码} % (fold)
+    \label{sec:图像压缩编码}
+
+        \textbf{熵编码压缩比}：
+
+        根据经验，对于文本文件，重复性越高，则压缩比越高，测试如下表
+
+        \begin{table}[H]
+            \caption{WinRar压缩文本文件}
+            \label{tab:winrar}
+            \centering
+        
+            \ttfamily
+            \begin{tabular}{l|l|l|l|l}
+            \hline
+        
+            \hline
+            \textbf{文件名} & \textbf{文本内容(matlab写入文件)} & \textbf{压缩前大小} & \textbf{压缩后大小} & \textbf{压缩比} \\
+            \hline
+                high.txt & repmat(['1'],1,10000) & 10000bytes & 101bytes & 99.01 \\
+            \hline
+                normal.txt & int2str(2\^{}1000) & 302bytes & 106bytes & 2.85 \\
+            \hline
+                low.txt & 'ghjkl;' & 6bytes & 77bytes & 0.08 \\
+        
+            \hline
+            \end{tabular}
+        \end{table}
+
+        本章练习题所用数据均可由“JpegCoeff.mat”导入，其内容如表\ref{tab:JpegCoeff}所示。本章练习题中“测试图像”指的是\href{run:../resource/hall.mat}{\texttt{hall.mat}}中的\textbf{灰度图像}。
+
+        \begin{table}[H]
+            \caption{\texttt{JpegCoeff.mat}中所含数据}
+            \label{tab:JpegCoeff}
+            \centering
+        
+            \begin{tabular}{ccc}
+            \hline
+        
+            \hline
+            \textbf{变量名} & \textbf{含义} & \textbf{说明} \\
+            \hline
+                \texttt{QTAB} & \tabincell{l}{\texttt{DCT}系数的量化 \\步长矩阵，式(\ref{eq:QTAB})} & \\
+            \hline
+                \texttt{DCTAB} & \tabincell{l}{\texttt{DC}系数预测误差 \\的\texttt{Category}码本，\\表\ref{tab:DC_Huffman}} & \tabincell{l}{每行对应一个\texttt{Category}，第一列对应\texttt{Huffman}编码 \\的长度\texttt{L}，随后\texttt{L}列对应该码字，再后全零为填充物} \\
+            \hline
+                \texttt{ACTAB} & \tabincell{l}{\texttt{AC}系数的 (\texttt{Run/Size})\\的码本，完整的表\ref{tab:AC_Huffman}} & \tabincell{l}{每行对应一个(\texttt{Run/Size})，第一列表示\texttt{Run}，第二列 \\表示\texttt{Size}，第三列表示该(\texttt{Run/Size})对应的\texttt{Huffman} \\编码的长度\texttt{L}，随后\texttt{L}列对应该码字，再后全零为填充物} \\
+            \hline
+
+            \hline
+            \end{tabular}
+        \end{table}
+
+        \begin{equation}
+        \label{eq:QTAB}
+            Q = \left[
+            \begin{matrix}
+                16 & 11 & 10 & 16 & 24 & 40 & 51 & 61 \\
+                12 & 12 & 14 & 19 & 26 & 58 & 60 & 55 \\
+                14 & 13 & 16 & 24 & 40 & 57 & 69 & 56 \\
+                14 & 17 & 22 & 29 & 51 & 87 & 80 & 62 \\
+                18 & 22 & 37 & 56 & 68 & 109 & 103 & 77 \\
+                24 & 35 & 55 & 64 & 81 & 104 & 113 & 92 \\
+                49 & 64 & 78 & 87 & 103 & 121 & 120 & 101 \\
+                72 & 92 & 95 & 98 & 112 & 100 & 103 & 99
+            \end{matrix}
+            \right]
+        \end{equation}
+
+        \begin{table}[H]
+            \caption{亮度直流分量预测误差的\texttt{Category}及其\texttt{Huffman}编码}
+            \label{tab:DC_Huffman}
+            \centering
+        
+            \begin{tabular}{ccc}
+            \hline
+        
+            \hline
+            \textbf{预测误差} & \textbf{\texttt{Category}} & \textbf{\texttt{Huffman}编码} \\
+            \hline
+                0 & 0 & 00 \\
+                -1, 1 & 1 & 010 \\
+                -3, -2, 2, 3 & 2 & 011 \\
+                -7, $\cdots$, -4, 4, $\cdots$, 7 & 3 & 100 \\
+                -15, $\cdots$, -8, 8, $\cdots$, 15 & 4 & 101 \\
+                -31, $\cdots$, -16, 16, $\cdots$, 31 & 5 & 110 \\
+                -63, $\cdots$, -32, 32, $\cdots$, 63 & 6 & 1110 \\
+                -127, $\cdots$, -64, 64, $\cdots$, 127 & 7 & 11110 \\
+                -255, $\cdots$, -128, 128, $\cdots$, 255 & 8 & 111110 \\
+                -511, $\cdots$, -256, 256, $\cdots$, 511 & 9 & 1111110 \\
+                -1023, $\cdots$, -512, 512, $\cdots$, 1023 & 10 & 11111110 \\
+                -2047, $\cdots$, -1024, 1024, $\cdots$, 2047 & 11 & 111111110 \\
+            \hline
+
+            \hline
+            \end{tabular}
+        \end{table}
+
+        \begin{table}[H]
+            \caption{亮度\texttt{AC}分量的\texttt{Run/Size}及其\texttt{Huffman}编码(部分)}
+            \label{tab:AC_Huffman}
+            \centering
+        
+            \begin{tabular}{llllll}
+            \hline
+        
+            \hline
+            \textbf{\texttt{Run/Size}} & \textbf{码长} & \textbf{码字} & \textbf{\texttt{Run/Size}} & \textbf{码长} & \textbf{码字} \\
+            \hline
+                0/0(EOB) & 4 & 1010 & & & \\
+                0/1 & 2 & 00 & 4/1 & 6 & 111011 \\
+                0/2 & 2 & 01 & 4/2 & 10 & 1111111000 \\
+                0/3 & 3 & 100 & 4/3 & 16 & 1111111110010111 \\
+                0/4 & 4 & 1011 & 4/4 & 16 & 1111111110011000 \\
+                0/5 & 5 & 11010 & 4/5 & 16 & 1111111110011001 \\
+                0/6 & 6 & 111000 & 4/6 & 16 & 1111111110011010 \\
+                0/7 & 7 & 1111000 & 4/7 & 16 & 1111111110011011 \\
+                0/8 & 10 & 1111110110 & 4/8 & 16 & 1111111110011100 \\
+                0/9 & 16 & 1111111110000010 & 4/9 & 16 & 1111111110011101 \\
+                0/A & 16 & 1111111110000011 & 4/A & 16 & 1111111110011110 \\
+                 & & & & & \\
+                1/1 & 4 & 1100 & 8/1 & 8 & 11111010 \\
+                1/2 & 6 & 111001 & 8/2 & 15 & 111111111000000 \\
+                1/3 & 7 & 1111001 & 8/3 & 16 & 1111111110110111 \\
+                1/4 & 9 & 111110110 & 8/4 & 16 & 1111111110111000 \\
+                1/5 & 11 & 11111110110 & 8/5 & 16 & 1111111110111001 \\
+                1/6 & 16 & 1111111110000100 & 8/6 & 16 & 1111111110111010 \\
+                1/7 & 16 & 1111111110000101 & 8/7 & 16 & 1111111110111011 \\
+                1/8 & 16 & 1111111110000110 & 8/8 & 16 & 1111111110111100 \\
+                1/9 & 16 & 1111111110000111 & 8/9 & 16 & 1111111110111101 \\
+                1/A & 16 & 1111111110001000 & 8/A & 16 & 1111111110111110 \\
+                 & & & F/0(ZRL) & 11 & 11111111001 \\
+                2/1 & 5 & 11011 & F/1 & 16 & 1111111111110101 \\
+                2/2 & 8 & 11111000 & F/2 & 16 & 1111111111110110 \\
+                2/3 & 10 & 1111110111 & F/3 & 16 & 1111111111110111 \\
+                2/4 & 16 & 1111111110001001 & F/4 & 16 & 1111111111111000 \\
+                2/5 & 16 & 1111111110001010 & F/5 & 16 & 1111111111111001 \\
+                2/6 & 16 & 1111111110001011 & F/6 & 16 & 1111111111111010 \\
+                2/7 & 16 & 1111111110001100 & F/7 & 16 & 1111111111111011 \\
+                2/8 & 16 & 1111111110001101 & F/8 & 16 & 1111111111111100 \\
+                2/9 & 16 & 1111111110001110 & F/9 & 16 & 1111111111111101 \\
+                2/A & 16 & 1111111110001111 & F/A & 16 & 1111111111111110 \\
+            \hline
+        
+            \hline
+            \end{tabular}
+        \end{table}
+
+        \begin{enumerate}
+            \item 图像的预处理是将每个像素灰度值减去\texttt{128}，这个步骤是否可以在变换域进行？
+
+                变换域与时域(或空域)的对应关系为
+                \begin{equation}
+                    \mathbf{C}=\sum_{x=0}^{N-1}\sum_{y=0}^{N-1}P_{x,y}\mathbf{D}^{(2)}(x,y)
+                \end{equation}
+                其中$\mathbf{D}^{(2)}(x,y)$表示二维\texttt{DCT}的第$(x,y)$个基矩阵，其第$(i,j)$个分量为
+                \begin{equation}
+                    \mathbf{D}_{i,j}^{(2)}(x,y)=\alpha _i\alpha _j\cos{\frac{i(2x+1)\pi}{2N}}\cos{\frac{j(2y+1)\pi}{2N}}
+                \end{equation}
+
+                对原图像进行预处理：
+                $$\bar{P}_{x,y}=P_{x,y}-128$$
+
+                则有
+                \[
+                    \begin{split}
+                        \bar{\mathbf{C}} & =\sum_{x=0}^{N-1}\sum_{y=0}^{N-1}\bar{P}_{x,y}\mathbf{D}^{(2)}(x,y) \\
+                         & =\mathbf{C}-128\sum_{x=0}^{N-1}\sum_{y=0}^{N-1}\mathbf{D}^{(2)}(x,y)
+                    \end{split}
+                \]
+
+                而
+                \[
+                    \begin{split}
+                        \sum_{x=0}^{N-1} \sum_{y=0}^{N-1} \mathbf{D}_{i,j}^{(2)}(x,y) &= \alpha _i \alpha _j \sum_{x=0}^{N-1} \cos{\frac{i(2x+1)\pi}{2N}} \sum_{y=0}^{N-1} \cos{\frac{j(2y+1)\pi}{2N}}\\
+                        &= \left\{
+                            \begin{matrix}
+                                \alpha _i \alpha _j N^2 = N, & i=j=0\\
+                                0, & elsewhere\\
+                            \end{matrix}
+                        \right.
+                    \end{split}
+                \]
+
+                若要在\textbf{变换域}进行预处理，则对应关系为
+                \[
+                    \begin{split}
+                        \bar{\mathbf{C}}_{i,j} &= \mathbf{C}_{i,j} - 128N, i=j=0\\
+                        \bar{\mathbf{C}}_{i,j} &= \mathbf{C}_{i,j}, \qquad \quad \ \ i \neq 0, j \neq 0
+                    \end{split}
+                \]
+
+                \textbf{因此，这个步骤可以在变换域进行，只需把变换域直流分量减去$128N$即可}，取\texttt{hall\_gray}左上角$8\times 8$验证如下：
+
+                \begin{minted}{matlab}
+>> A = hall_gray(1:8,1:8);
+>> Y1 = dct2(A-128);    % preprocess on Space Domain
+>> Y2 = dct2(A);
+>> Y2(1,1) = Y2(1,1) - 128*8;   % preprocess on Transform Domain
+>> mse(Y1,Y2)
+
+ans =
+
+   5.5804e-27
+                \end{minted}
+                \begingroup
+                    \captionof{listing}{验证变换域预处理\label{code:c_preprocess}}
+                \endgroup
+
+                其中\texttt{mse}为自定义函数，用于计算两个矩阵的均方误差：
+
+                \begin{listing}[H]
+                    \caption{\texttt{mse.m}}
+                    \label{code:mse}
+                    \inputminted{matlab}{../mse.m}
+                \end{listing}
+
+                由运行代码\ref{code:c_preprocess}中得到的\texttt{mse}结果可知，在变换域减去一定直流分量与预处理原图像是\textbf{等价}的。
+
+        \end{enumerate}
+    
+    % section 图像压缩编码 (end)
 
 \end{document}
