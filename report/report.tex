@@ -363,9 +363,6 @@ ans =
 
    5.5804e-27
                 \end{minted}
-                \begingroup
-                    \captionof{listing}{验证变换域预处理\label{code:c_preprocess}}
-                \endgroup
 
                 其中\texttt{mse}为自定义函数，用于计算两个矩阵的均方误差：
 
@@ -412,6 +409,91 @@ ans =
                 \end{minted}
 
                 说明\texttt{mydct2}与\texttt{dct2}计算结果相同。
+
+            \item 如果将\texttt{DCT}系数矩阵中右侧四列(或左侧四列)的系数全部置零，逆变换后的图像会发生什么变化？
+
+            \texttt{DCT}矩阵的右侧主要是横向高频分量系数，即影响横向纹理的清晰度，\textbf{右侧四列置零会使得横向纹理变模糊}；左侧四列包含了左上角的全部低频分量，以及左下角的纵向高频分量，\textbf{左侧四列置零会使得整个图像变黑，无法辨认，仅残留少量横向纹理}。
+
+            为了便于图像处理，自定义函数\texttt{imdct}以及\texttt{imidct}，实现分块($8\times 8$)应用\texttt{DCT}或\texttt{IDCT}并进行整合的功能，\texttt{imdct}接受\textbf{函数句柄}作为参数，方便后续的各种处理方式。
+
+            \begin{listing}[H]
+                \caption{\texttt{imdct.m}}
+                \label{code:imdct}
+                \inputminted{matlab}{../imdct.m}
+            \end{listing}
+
+            \begin{listing}[H]
+                \caption{\texttt{imidct.m}}
+                \label{code:imidct}
+                \inputminted{matlab}{../imidct.m}
+            \end{listing}
+
+            \newpage
+            选取一小块$8\times 8$图像验证：
+            \begin{minted}{matlab}
+>> rightzero = @(A)([A(:,1:4),zeros(8,4)]);     % Handle of process function
+>> A = hall_gray(97:104,153:160);
+>> I = imidct(imdct(A,rightzero));
+>> imwrite(A,'images\test_block.png');
+>> imwrite(I,'images\test_block_rightzero.png');
+>>
+>> leftzero = @(A)([zeros(8,4),A(:,5:8)]);
+>> I = imidct(imdct(A,leftzero));
+>> imwrite(I,'images\test_block_leftzero.png');
+            \end{minted}
+
+            \begin{figure}[H]
+                \centering
+                \begin{subfigure}{0.3\textwidth}
+                    \centering
+                    \includegraphics[width=0.6\linewidth]{test_block}
+                    \caption{测试\texttt{block}}
+                \end{subfigure}%
+                \begin{subfigure}{0.3\textwidth}
+                    \centering
+                    \includegraphics[width=0.6\linewidth]{test_block_rightzero}
+                    \caption{右四列置零}
+                \end{subfigure}%
+                \begin{subfigure}{0.3\textwidth}
+                    \centering
+                    \includegraphics[width=0.6\linewidth]{test_block_leftzero}
+                    \caption{左四列置零}
+                \end{subfigure}
+                \caption{左右置零-小块图像测试结果}
+            \end{figure}
+
+            再测试整体效果：
+
+            \begin{minted}{matlab}
+>> imwrite(hall_gray,'images\hall_gray.png');
+>> I = imidct(imdct(hall_gray,rightzero));
+>> imwrite(I,'images\hall_gray_rightzero.png');
+>> I = imidct(imdct(hall_gray,leftzero));
+>> imwrite(I,'images\hall_gray_leftzero.png');
+            \end{minted}
+
+            图像处理结果如图\ref{fig:rlzero}，可见右四列置零后横向纹理变弱(树的部分较明显)，左四列置零后仅剩余少量横向高频分量(轮廓)，符合预期。
+
+            \begin{figure}[H]
+                \centering
+                \begin{subfigure}{\textwidth}
+                    \centering
+                    \includegraphics[width=0.6\linewidth]{hall_gray}
+                    \caption{\texttt{hall\_gray}}
+                \end{subfigure}
+                \begin{subfigure}{\textwidth}
+                    \centering
+                    \includegraphics[width=0.6\linewidth]{hall_gray_rightzero}
+                    \caption{右四列置零}
+                \end{subfigure}
+                \begin{subfigure}{\textwidth}
+                    \centering
+                    \includegraphics[width=0.6\linewidth]{hall_gray_leftzero}
+                    \caption{左四列置零}
+                \end{subfigure}
+                \caption{左右置零-整体图像测试结果}
+                \label{fig:rlzero}
+            \end{figure}
 
         \end{enumerate}
     
