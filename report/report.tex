@@ -39,6 +39,9 @@
 \newcommand{\tabincell}[2]{\begin{tabular}{@{}#1@{}}#2\end{tabular}}
 \usepackage{multirow}
 
+\usepackage{mathtools}
+\usepackage{amsfonts}
+
 \author{郭一隆(2013011189)}
 \title{图像处理实验报告}
 
@@ -602,6 +605,78 @@ ans =
                         强烈的横纵高频分量导致了明显的黑白分块，原有图像轮廓能凭借先验知识分辨，细节很难辨认。
 
                 \end{itemize}
+
+            \item 如果认为差分编码是一个系统，请绘出这个系统的频率响应，说明其滤波器类型。\texttt{DC}系数先进行差分编码再进行熵编码，说明\texttt{DC}系数的哪种分量更多？
+
+                差分编码系统：
+
+                \[
+                    \hat{c}_D(n) = \left\{ \begin{matrix*}[l]
+                        \tilde{c}_D(n) & n = 1 \\
+                        \tilde{c}_D(n-1) - \tilde{c}_D(n) & elsewhere \\
+                    \end{matrix*}
+                    \right.
+                \]
+
+                不妨认为$\tilde{c}_D(n)$是因果信号，则差分编码系统传递函数为
+
+                $$
+                    H(z) = z^{-1} - 1
+                $$
+
+                是\textbf{高通滤波器}，幅频特性如图\ref{fig:freqz_differential_coding}
+
+                这说明\texttt{DC}系数中的\textbf{低频分量更多}，通过差分编码滤去大量低频分量再进行熵编码，码长缩短。直观地说，\texttt{DC}系数中相邻系数一般相差不大，差分后压缩性能更佳。
+
+                \begin{figure}[H]
+                    \centering
+                    \includegraphics[width=\textwidth]{freqz_differential_coding}
+                    \caption{差分编码系统幅频特性}
+                    \label{fig:freqz_differential_coding}
+                \end{figure}
+
+            \item \texttt{DC}预测误差的取值和\texttt{Category}值有何关系？如何利用预测误差计算出其\texttt{Category}？
+
+                观察表\ref{tab:DC_Huffman}容易得出：(预测误差记为\texttt{Error})
+
+                $$
+                    Error \in \{ 2^{Category-1} \leq \left| n\right| < 2^{Category} \mid n \in \mathbb{Z} \}
+                $$
+
+                $$
+                    Category = \left \lfloor \log_2{\left| Error \right|} \right \rfloor + 1
+                $$
+
+            \item 实现\texttt{Zig-Zag}扫描
+
+                \begin{figure}[H]
+                    \centering
+                    \includegraphics[width=0.5\textwidth]{Zig-Zag}
+                    \caption{\texttt{Zig-Zag}扫描示意图}
+                    \label{fig:zig_zag}
+                \end{figure}
+
+                \begin{enumerate}
+                    \item 循环实现
+                        \inputminted{matlab}{../zigzag1.m}
+                        \begingroup
+                            \captionof{listing}{\texttt{zigzag1.m}}
+                        \endgroup
+
+                    \item 查表实现：扫描固定$8\times 8$大小的矩阵可直接用查表法实现
+
+                        \begin{listing}[H]
+                            \caption{\texttt{zigzag2.m}}
+                            \inputminted{matlab}{../zigzag2.m}
+                        \end{listing}
+
+                \end{enumerate}
+
+                能想到的只有通用但低效的循环算法以及专用高效的查表法，在当前给定条件下，显然查表法更具有优势。
+
+            \item 对测试图像分块、\texttt{DCT}和量化，将量化后的系数写成矩阵的形式，其中每一列为一个块的\texttt{DCT}系数\texttt{Zig-Zag}扫描后形成的列矢量，第一行为各个块的\texttt{DC}系数。
+
+                
 
         \end{enumerate}
     
