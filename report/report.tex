@@ -412,88 +412,196 @@ ans =
 
             \item 如果将\texttt{DCT}系数矩阵中右侧四列(或左侧四列)的系数全部置零，逆变换后的图像会发生什么变化？
 
-            \texttt{DCT}矩阵的右侧主要是横向高频分量系数，即影响横向纹理的清晰度，\textbf{右侧四列置零会使得横向纹理变模糊}；左侧四列包含了左上角的全部低频分量，以及左下角的纵向高频分量，\textbf{左侧四列置零会使得整个图像变黑，无法辨认，仅残留少量横向纹理}。
+                \texttt{DCT}矩阵的右侧主要是横向高频分量系数，即影响横向纹理的清晰度，\textbf{右侧四列置零会使得横向纹理变模糊}；左侧四列包含了左上角的全部低频分量，以及左下角的纵向高频分量，\textbf{左侧四列置零会使得整个图像变黑，无法辨认，仅残留少量横向纹理}。
 
-            为了便于图像处理，自定义函数\texttt{imdct}以及\texttt{imidct}，实现分块($8\times 8$)应用\texttt{DCT}或\texttt{IDCT}并进行整合的功能，\texttt{imdct}接受\textbf{函数句柄}作为参数，方便后续的各种处理方式。
+                为了便于图像处理，自定义函数\texttt{imdct}以及\texttt{imidct}，实现分块($8\times 8$)应用\texttt{DCT}或\texttt{IDCT}并进行整合的功能，\texttt{imdct}接受\textbf{函数句柄}作为参数，方便后续的各种处理方式。
 
-            \begin{listing}[H]
-                \caption{\texttt{imdct.m}}
-                \label{code:imdct}
-                \inputminted{matlab}{../imdct.m}
-            \end{listing}
+                \begin{listing}[H]
+                    \caption{\texttt{imdct.m}}
+                    \label{code:imdct}
+                    \inputminted{matlab}{../imdct.m}
+                \end{listing}
 
-            \begin{listing}[H]
-                \caption{\texttt{imidct.m}}
-                \label{code:imidct}
-                \inputminted{matlab}{../imidct.m}
-            \end{listing}
+                \begin{listing}[H]
+                    \caption{\texttt{imidct.m}}
+                    \label{code:imidct}
+                    \inputminted{matlab}{../imidct.m}
+                \end{listing}
 
-            \newpage
-            选取一小块$8\times 8$图像验证：
-            \begin{minted}{matlab}
->> rightzero = @(A)([A(:,1:4),zeros(8,4)]);     % Handle of process function
+                \newpage
+                选取一小块$8\times 8$图像验证：
+                \begin{minted}{matlab}
+    >> rightzero = @(A)([A(:,1:4),zeros(8,4)]);     % Handle of process function
+    >> A = hall_gray(97:104,153:160);
+    >> I = imidct(imdct(A,rightzero));
+    >> imwrite(A,'images\test_block.png');
+    >> imwrite(I,'images\test_block_rightzero.png');
+    >>
+    >> leftzero = @(A)([zeros(8,4),A(:,5:8)]);
+    >> I = imidct(imdct(A,leftzero));
+    >> imwrite(I,'images\test_block_leftzero.png');
+                \end{minted}
+
+                \begin{figure}[H]
+                    \centering
+                    \begin{subfigure}{0.3\textwidth}
+                        \centering
+                        \includegraphics[width=0.6\linewidth]{test_block}
+                        \caption{测试\texttt{block}}
+                    \end{subfigure}%
+                    \begin{subfigure}{0.3\textwidth}
+                        \centering
+                        \includegraphics[width=0.6\linewidth]{test_block_rightzero}
+                        \caption{右四列置零}
+                    \end{subfigure}%
+                    \begin{subfigure}{0.3\textwidth}
+                        \centering
+                        \includegraphics[width=0.6\linewidth]{test_block_leftzero}
+                        \caption{左四列置零}
+                    \end{subfigure}
+                    \caption{左右置零-小块图像测试结果}
+                \end{figure}
+
+                再测试整体效果：
+
+                \begin{minted}{matlab}
+    >> imwrite(hall_gray,'images\hall_gray.png');
+    >> I = imidct(imdct(hall_gray,rightzero));
+    >> imwrite(I,'images\hall_gray_rightzero.png');
+    >> I = imidct(imdct(hall_gray,leftzero));
+    >> imwrite(I,'images\hall_gray_leftzero.png');
+                \end{minted}
+
+                图像处理结果如图\ref{fig:rlzero}，可见\textbf{右四列置零后横向纹理变弱(树的部分较明显)，左四列置零后仅剩余少量横向高频分量(轮廓)，符合预期。}
+
+                \begin{figure}[H]
+                    \centering
+                    \begin{subfigure}{\textwidth}
+                        \centering
+                        \includegraphics[width=0.6\linewidth]{hall_gray}
+                        \caption{\texttt{hall\_gray}}
+                    \end{subfigure}
+                    \begin{subfigure}{\textwidth}
+                        \centering
+                        \includegraphics[width=0.6\linewidth]{hall_gray_rightzero}
+                        \caption{右四列置零}
+                    \end{subfigure}
+                    \begin{subfigure}{\textwidth}
+                        \centering
+                        \includegraphics[width=0.6\linewidth]{hall_gray_leftzero}
+                        \caption{左四列置零}
+                    \end{subfigure}
+                    \caption{左右置零-整体图像测试结果}
+                    \label{fig:rlzero}
+                \end{figure}
+
+            \item 若对\texttt{DCT}系数分别做转置、旋转\texttt{90}度和旋转\texttt{180}度操作，逆变换后恢复的图像有何变化？
+
+                \begin{itemize}
+                    \item \textbf{转置}使得行列频率信息交换，则逆变换后\textbf{图像被转置}
+
+                        \[
+                            \mathbf{C}^T = (\mathbf{DPD}^T)^T = \mathbf{DP}^T\mathbf{D}^T
+                        \]
+
+                        \begin{minted}{matlab}
 >> A = hall_gray(97:104,153:160);
->> I = imidct(imdct(A,rightzero));
->> imwrite(A,'images\test_block.png');
->> imwrite(I,'images\test_block_rightzero.png');
->>
->> leftzero = @(A)([zeros(8,4),A(:,5:8)]);
->> I = imidct(imdct(A,leftzero));
->> imwrite(I,'images\test_block_leftzero.png');
-            \end{minted}
+>> transpose = @(A)(A.');
+>> I = imidct(imdct(A,transpose));
+>> imwrite(I,'images\test_block_transpose.png');
+                        \end{minted}
 
-            \begin{figure}[H]
-                \centering
-                \begin{subfigure}{0.3\textwidth}
-                    \centering
-                    \includegraphics[width=0.6\linewidth]{test_block}
-                    \caption{测试\texttt{block}}
-                \end{subfigure}%
-                \begin{subfigure}{0.3\textwidth}
-                    \centering
-                    \includegraphics[width=0.6\linewidth]{test_block_rightzero}
-                    \caption{右四列置零}
-                \end{subfigure}%
-                \begin{subfigure}{0.3\textwidth}
-                    \centering
-                    \includegraphics[width=0.6\linewidth]{test_block_leftzero}
-                    \caption{左四列置零}
-                \end{subfigure}
-                \caption{左右置零-小块图像测试结果}
-            \end{figure}
+                        \begin{figure}[H]
+                            \centering
+                            \begin{subfigure}{0.5\textwidth}
+                                \centering
+                                \includegraphics[width=0.6\linewidth]{test_block}
+                                \caption{\texttt{test\_block}}
+                            \end{subfigure}%
+                            \begin{subfigure}{0.5\textwidth}
+                                \centering
+                                \includegraphics[width=0.6\linewidth]{test_block_transpose}
+                                \caption{转置}
+                            \end{subfigure}
+                            \caption{转置\texttt{DCT}系数}
+                        \end{figure}
 
-            再测试整体效果：
+                    \item \textbf{旋转\texttt{90}度}使得直流分量系数变为纵向高频分量系数，则逆变换后\textbf{整体图像变暗，纵向高频分量强烈}
 
-            \begin{minted}{matlab}
->> imwrite(hall_gray,'images\hall_gray.png');
->> I = imidct(imdct(hall_gray,rightzero));
->> imwrite(I,'images\hall_gray_rightzero.png');
->> I = imidct(imdct(hall_gray,leftzero));
->> imwrite(I,'images\hall_gray_leftzero.png');
-            \end{minted}
+                        \begin{minted}{matlab}
+>> I = imidct(imdct(A,@rot90));
+>> imwrite(I,'images\test_block_rot90.png');
+>> 
+>> I = imidct(imdct(hall_gray,@rot90));
+>> imwrite(I,'images\hall_gray_rot90.png');
+                        \end{minted}
 
-            图像处理结果如图\ref{fig:rlzero}，可见右四列置零后横向纹理变弱(树的部分较明显)，左四列置零后仅剩余少量横向高频分量(轮廓)，符合预期。
+                        \begin{figure}[H]
+                            \centering
+                            \begin{subfigure}{0.5\textwidth}
+                                \centering
+                                \includegraphics[width=0.6\linewidth]{test_block}
+                                \caption{\texttt{test\_block}}
+                            \end{subfigure}%
+                            \begin{subfigure}{0.5\textwidth}
+                                \centering
+                                \includegraphics[width=0.6\linewidth]{test_block_rot90}
+                                \caption{逆时针旋转\texttt{90}度}
+                            \end{subfigure}
+                            \begin{subfigure}{0.5\textwidth}
+                                \centering
+                                \includegraphics[width=0.6\linewidth]{hall_gray}
+                                \caption{\texttt{hall\_gray}}
+                            \end{subfigure}%
+                            \begin{subfigure}{0.5\textwidth}
+                                \centering
+                                \includegraphics[width=0.6\linewidth]{hall_gray_rot90}
+                                \caption{逆时针旋转\texttt{90}度}
+                            \end{subfigure}
+                            \caption{\texttt{DCT}系数逆时针旋转\texttt{90}度}
+                        \end{figure}
 
-            \begin{figure}[H]
-                \centering
-                \begin{subfigure}{\textwidth}
-                    \centering
-                    \includegraphics[width=0.6\linewidth]{hall_gray}
-                    \caption{\texttt{hall\_gray}}
-                \end{subfigure}
-                \begin{subfigure}{\textwidth}
-                    \centering
-                    \includegraphics[width=0.6\linewidth]{hall_gray_rightzero}
-                    \caption{右四列置零}
-                \end{subfigure}
-                \begin{subfigure}{\textwidth}
-                    \centering
-                    \includegraphics[width=0.6\linewidth]{hall_gray_leftzero}
-                    \caption{左四列置零}
-                \end{subfigure}
-                \caption{左右置零-整体图像测试结果}
-                \label{fig:rlzero}
-            \end{figure}
+                        纵向高频分量过强导致了明显的黑白分层，原有图像轮廓还能分辨，细节很难辨认。
+
+                    \item \textbf{旋转\texttt{180}度}使得直流分量系数变为横纵高频分量系数，则逆变换后\textbf{整体图像变暗，横纵高频分量均变强}
+
+                        \begin{minted}{matlab}
+>> rot180 = @(A)(rot90(A,2));
+>> I = imidct(imdct(A,rot180));
+>> imwrite(I,'images\test_block_rot180.png');
+>> 
+>> I = imidct(imdct(hall_gray,rot180));
+>> imwrite(I,'images\hall_gray_rot180.png');
+                        \end{minted}
+
+                        \begin{figure}[H]
+                            \centering
+                            \begin{subfigure}{0.5\textwidth}
+                                \centering
+                                \includegraphics[width=0.6\linewidth]{test_block}
+                                \caption{\texttt{test\_block}}
+                            \end{subfigure}%
+                            \begin{subfigure}{0.5\textwidth}
+                                \centering
+                                \includegraphics[width=0.6\linewidth]{test_block_rot180}
+                                \caption{旋转\texttt{180}度}
+                            \end{subfigure}
+                            \begin{subfigure}{0.5\textwidth}
+                                \centering
+                                \includegraphics[width=0.6\linewidth]{hall_gray}
+                                \caption{\texttt{hall\_gray}}
+                            \end{subfigure}%
+                            \begin{subfigure}{0.5\textwidth}
+                                \centering
+                                \includegraphics[width=0.6\linewidth]{hall_gray_rot180}
+                                \caption{旋转\texttt{180}度}
+                            \end{subfigure}
+                            \caption{\texttt{DCT}系数旋转\texttt{180}度}
+                        \end{figure}
+
+                        强烈的横纵高频分量导致了明显的黑白分块，原有图像轮廓能凭借先验知识分辨，细节很难辨认。
+
+                \end{itemize}
 
         \end{enumerate}
     
