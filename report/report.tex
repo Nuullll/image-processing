@@ -644,7 +644,7 @@ ans =
                 $$
 
                 $$
-                    Category = \left \lfloor \log_2{\left| Error \right|} \right \rfloor + 1
+                    Category = \left \lceil \log_2{\left| Error \right| + 1} \right \rceil
                 $$
 
             \item 实现\texttt{Zig-Zag}扫描
@@ -676,7 +676,14 @@ ans =
 
             \item 对测试图像分块、\texttt{DCT}和量化，将量化后的系数写成矩阵的形式，其中每一列为一个块的\texttt{DCT}系数\texttt{Zig-Zag}扫描后形成的列矢量，第一行为各个块的\texttt{DC}系数。
 
-                
+                \inputminted{matlab}{../quantize.m}
+                \begingroup
+                    \captionof{listing}{\texttt{quantize.m}}
+                \endgroup
+
+            \item 实现本章介绍的\texttt{JPEG}编码，输出为\texttt{DC}系数的码流、\texttt{AC}系数的码流、图像高度和图像宽度，写入\href{run:../resource/jpegcodes.mat}{\texttt{jpegcodes.mat}}文件。
+
+
 
         \end{enumerate}
     
