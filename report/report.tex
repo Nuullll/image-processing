@@ -676,17 +676,138 @@ ans =
 
             \item 对测试图像分块、\texttt{DCT}和量化，将量化后的系数写成矩阵的形式，其中每一列为一个块的\texttt{DCT}系数\texttt{Zig-Zag}扫描后形成的列矢量，第一行为各个块的\texttt{DC}系数。
 
+                先延伸图像使得其宽高像素值均为\texttt{8}的倍数，再分块、\texttt{DCT}、量化、\texttt{Zig-Zag}扫描，最后进行整合。
+
                 \inputminted{matlab}{../quantize.m}
                 \begingroup
                     \captionof{listing}{\texttt{quantize.m}}
                 \endgroup
 
-            \item 实现本章介绍的\texttt{JPEG}编码，输出为\texttt{DC}系数的码流、\texttt{AC}系数的码流、图像高度和图像宽度，写入\href{run:../resource/jpegcodes.mat}{\texttt{jpegcodes.mat}}文件。
+            \item 实现本章介绍的\texttt{JPEG}编码，输出为\texttt{DC}系数的码流、\texttt{AC}系数的码流、图像高度和图像宽度，写入\href{run:../result/jpegcodes.mat}{\texttt{jpegcodes.mat}}文件。
 
+                \inputminted{matlab}{../jpeg.m}
+                \begingroup
+                    \captionof{listing}{\texttt{jpeg.m}}
+                \endgroup
 
+            \item 计算压缩比(输入文件长度/输出码流长度)，注意转换为相同进制。
+
+                压缩比$=\frac{height\times width\times 8}{length(DC\_stream) + length(AC\_stream)}=\frac{120\times168\times 8}{2031+23072}=6.42$
+
+            \item 请实现本章介绍的\texttt{JPEG}解码。
+
+                \textbf{思路：}
+
+                \begin{enumerate}
+                    \item 解\texttt{DC}码流：利用\texttt{DCTAB}逐行匹配得到\texttt{magnitude}码长，进一步解出系数；
+                    \item 解\texttt{AC}码流：利用\texttt{ACTAB}逐行匹配得到\texttt{Run}、\texttt{Size}，注意\texttt{EOB}和\texttt{ZRL}需特殊处理，进一步解出系数；
+                    \item 逆\texttt{Zig-Zag}：查表法；
+                    \item 反量化；
+                    \item 按块逆\texttt{DCT}变换；
+                    \item 拼接，\texttt{+128}；
+                    \item 裁剪图像使得与原图像宽高相同。
+                \end{enumerate}
+
+                \inputminted{matlab}{../dejpeg.m}
+                \begingroup
+                    \captionof{listing}{\texttt{dejpeg.m}}
+                \endgroup
+
+                \textbf{编解码效果：}
+
+                \begin{enumerate}
+                    \item \texttt{PSNR}评价：
+                        \begin{minted}{matlab}
+>> jpeg(hall_gray,QTAB,DCTAB,ACTAB);
+>> load('result\jpegcodes.mat')
+>> image = dejpeg(DC_stream,AC_stream,height,width,QTAB,DCTAB,ACTAB);
+>> psnr = 10*log10(255^2/mse(image,hall_gray))
+
+psnr =
+
+   34.8926
+                        \end{minted}
+
+                        $PSNR=34.89dB$说明失真较小，编解码效果很好。
+
+                    \item 主观评价：
+                        \begin{figure}[H]
+                            \centering
+                            \begin{subfigure}{0.5\textwidth}
+                                \centering
+                                \includegraphics[width=0.6\linewidth]{hall_gray}
+                                \caption{原图：\texttt{hall\_gray}}
+                            \end{subfigure}%
+                            \begin{subfigure}{0.5\textwidth}
+                                \centering
+                                \includegraphics[width=0.6\linewidth]{hall_gray_dejpeg}
+                                \caption{编解码后：\texttt{hall\_gray\_dejpeg}}
+                            \end{subfigure}
+                            \caption{主观评价编解码效果}
+                        \end{figure}
+
+                        肉眼几乎无法分辨编解码后图像与原图的区别，而压缩比达到了\texttt{6.42}，这说明\texttt{JPEG}编码是十分有效的图像压缩编码。
+
+                \end{enumerate}
+
+            \item 将量化步长减小为原来的一半，重做编解码。
+
+                \begin{minted}{matlab}
+>> jpeg(hall_gray,QTAB/2,DCTAB,ACTAB);
+>> load('result\jpegcodes.mat')
+>> image = dejpeg(DC_stream,AC_stream,height,width,QTAB/2,DCTAB,ACTAB);
+>> psnr = 10*log10(255^2/mse(image,hall_gray))
+
+psnr =
+
+    37.3208
+                \end{minted}
+
+                而可求得压缩比$=4.41$。
+
+                由此可知，减小量化步长可进一步减小失真率，但也伴随着压缩比的迅速衰减。而标准量化步长可较好地兼顾图像质量与压缩比。
+
+            \item 看电视时偶尔能看到美丽的雪花图像(\href{../resource/snow.mat}{\texttt{snow.mat}})，对其进行编解码。
+
+                \textbf{预测：}\texttt{JPEG}编码利用了自然图像通常高频分量较少的特点，而美丽的雪花图像高频分量非常强(横纵方向黑白相间)，可以预见\textbf{压缩比将大打折扣}。高频分量量化步长较大会导致\textbf{失真率升高}。
+
+                \begin{minted}{matlab}
+>> [DC_stream,AC_stream,height,width] = jpeg(snow,QTAB,DCTAB,ACTAB);
+>> image = dejpeg(DC_stream,AC_stream,height,width,QTAB,DCTAB,ACTAB);
+>> psnr = 10*log10(255^2/mse(image,snow))
+
+psnr =
+
+   29.5614
+
+>> r = height*width*8/length([DC_stream,AC_stream])
+
+r =
+
+    3.6450
+                \end{minted}
+
+                结果符合预期，原因在预测部分已说明。
+
+                \begin{figure}[H]
+                    \centering
+                    \begin{subfigure}{0.5\textwidth}
+                        \centering
+                        \includegraphics[width=0.6\linewidth]{snow}
+                        \caption{原图：\texttt{snow}}
+                    \end{subfigure}%
+                    \begin{subfigure}{0.5\textwidth}
+                        \centering
+                        \includegraphics[width=0.6\linewidth]{snow_dejpeg}
+                        \caption{编解码后：\texttt{snow\_dejpeg}}
+                    \end{subfigure}
+                    \caption{美丽的雪花图像编解码效果}
+                \end{figure}
 
         \end{enumerate}
     
     % section 图像压缩编码 (end)
+
+    
 
 \end{document}
