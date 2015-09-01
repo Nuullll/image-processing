@@ -1,7 +1,10 @@
-function [DC_stream,AC_stream,height,width] = jpeg(image,QTAB,DCTAB,ACTAB)
+function [DC_stream,AC_stream,height,width] = jpeg_hide(image,QTAB,DCTAB,ACTAB,hidefun,hideinfo)
 
 C = quantize(double(image)-128,QTAB);
 [height,width] = size(image);
+
+% hide info
+C = hidefun(C,hideinfo);
 
 % DC coefficient
 c = C(1,:);

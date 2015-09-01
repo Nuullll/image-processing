@@ -728,7 +728,7 @@ psnr =
    34.8926
                         \end{minted}
 
-                        $PSNR=34.89dB$说明失真较小，编解码效果很好。
+                        $\textrm{PSNR}=34.89\textrm{dB}$说明失真较小，编解码效果很好。
 
                     \item 主观评价：
                         \begin{figure}[H]
@@ -808,6 +808,273 @@ r =
     
     % section 图像压缩编码 (end)
 
+    \newpage
+    \section{信息隐藏} % (fold)
+    \label{sec:信息隐藏}
     
+        \begin{enumerate}
+            \item 实现本章介绍的空域隐藏方法和提取方法。验证其抗\texttt{JPEG}编码能力。
+
+                \textbf{隐藏信息：}\textcolor{green}{\texttt{Ingress Enlightened Agent @Vone}}
+
+                \begin{listing}[H]
+                    \inputminted{matlab}{../hide.m}
+                    \caption{\texttt{hide.m}}
+                \end{listing}
+
+                \begin{listing}[H]
+                    \inputminted{matlab}{../extract.m}
+                    \caption{\texttt{extract.m}}
+                \end{listing}
+
+                能够正确提取信息：
+
+                \begin{minted}{matlab}
+>> str = 'Ingress Enlightened Agent @Vone';
+>> 
+>> A = hide(hall_color,str);   % hide(hall_gray,str) also works
+>> extract(A)
+
+ans =
+
+Ingress Enlightened Agent @Vone 
+                \end{minted}
+
+                若不进行压缩编码，隐藏信息后的图像与原图几乎完全相同。
+
+                \begin{figure}[H]
+                    \centering
+                    \begin{subfigure}{0.5\textwidth}
+                        \centering
+                        \includegraphics[width=0.6\linewidth]{hall_color}
+                        \caption{原图：\texttt{hall\_color}}
+                    \end{subfigure}%
+                    \begin{subfigure}{0.5\textwidth}
+                        \centering
+                        \includegraphics[width=0.6\linewidth]{hall_color_hide}
+                        \caption{隐藏信息后：\texttt{hall\_color\_hide}}
+                    \end{subfigure}
+                    \caption{空域隐藏信息对图像的影响}
+                \end{figure}
+
+                \textbf{空域隐藏的抗\texttt{JPEG}编码能力：}
+
+                \begin{minted}{matlab}
+>> A = hide(hall_gray,str);
+>> [DC_stream,AC_stream,height,width] = jpeg(A,QTAB,DCTAB,ACTAB);
+>> image = dejpeg(DC_stream,AC_stream,height,width,QTAB,DCTAB,ACTAB);
+>> extract(image)
+
+ans =
+
+fvÒ½<×fß}ïºßËk2Â<-ç0®a2fØ( 
+                \end{minted}
+
+                就测试信息而言，可以说\textbf{空域隐藏方法抗\texttt{JPEG}编码能力极弱}。
+
+            \item 依次实现本章介绍的三种变换域信息隐藏方法和提取方法，分析嵌密方法的隐蔽性以及嵌密后\texttt{JPEG}图像的质量变化和压缩比变化。
+
+                在\href{../jpeg.m}{\texttt{jpeg.m}}的基础上完成\href{../jpeg_hide.m}{\texttt{jpeg\_hide.m}}，增加\texttt{hidefun}以及\texttt{hideinfo}接口。
+
+                \begin{listing}[H]
+                    \inputminted[firstline=1, lastline=8]{matlab}{../jpeg_hide.m}
+                    \caption{\texttt{jpeg\_hide.m(1-8)}}
+                \end{listing}
+
+                \begin{listing}[H]
+                    \inputminted[firstline=1, lastline=12]{matlab}{../dejpeg_extract.m}
+                    \caption{\texttt{dejpeg\_extract.m(1-12)}}
+                \end{listing}
+
+                \begin{enumerate}
+                    \item 同空域方法，用信息位逐一替换掉\textbf{每个}量化后的\texttt{DCT}系数的最低位，再进行熵编码。
+
+                        由于\texttt{DCT}系数可能是\textbf{负数}，若将系数转为二进制再替换最低位会涉及到补码等问题，比较繁琐，可直接从\textbf{奇偶性}考虑，比如奇数代表\texttt{1}，偶数代表\texttt{0}。
+
+                        \textbf{隐藏函数：}
+                        \inputminted{matlab}{../hide1.m}
+                        \begingroup
+                            \captionof{listing}{\texttt{hide1.m}}
+                        \endgroup
+
+                        \textbf{提取函数：}
+                        \begin{listing}[H]
+                            \inputminted{matlab}{../extract1.m}
+                            \caption{\texttt{extract1.m}}
+                        \end{listing}
+
+                        测试结果：
+
+                        \begin{minted}{matlab}
+>> [DC_stream,AC_stream,height,width] = jpeg_hide(hall_gray,QTAB,DCTAB,ACTAB,@hide1,str);
+>> [image,info] = dejpeg_extract(DC_stream,AC_stream,height,width,QTAB,DCTAB,ACTAB,@extract1);
+>> info
+
+info =
+
+Ingress Enlightened Agent @Vone 
+                        \end{minted}
+
+                        \begin{figure}[H]
+                            \centering
+                            \begin{subfigure}{0.5\textwidth}
+                                \centering
+                                \includegraphics[width=0.6\linewidth]{hall_gray_dejpeg}
+                                \caption{未隐藏信息：\texttt{hall\_gray\_dejpeg}}
+                            \end{subfigure}%
+                            \begin{subfigure}{0.5\textwidth}
+                                \centering
+                                \includegraphics[width=0.6\linewidth]{hall_gray_hide1}
+                                \caption{隐藏信息：\texttt{hall\_gray\_hide1}}
+                            \end{subfigure}
+                            \caption{\texttt{DCT}域隐藏方法\texttt{1}对图像的影响}
+                        \end{figure}
+
+                        可准确无误地提取出隐藏信息，但是隐藏信息再解码后，可明显看出隐藏信息的图像块(左上角)出现了失真。\textbf{隐蔽性较差}，肉眼可察觉。
+
+                        $$\textrm{PSNR}=34.69\textrm{dB}, r=6.32$$
+
+                        (隐藏信息较少，因此\texttt{PSNR}和\texttt{r}减小幅度较小)
+
+                    \item 用信息位逐一替换掉\textbf{若干}量化后的\texttt{DCT}系数的最低位，再进行熵编码。
+
+                        利用\texttt{magic}函数生成具体替换哪些\texttt{DCT}系数。
+
+                        \textbf{隐藏函数：}
+                        \begin{listing}[H]
+                            \inputminted{matlab}{../hide2.m}
+                            \caption{\texttt{hide2.m}}
+                        \end{listing}
+
+                        \textbf{提取函数：}
+                        \inputminted{matlab}{../extract2.m}
+                        \begingroup
+                            \captionof{listing}{\texttt{extract2.m}}
+                        \endgroup
+
+                        测试结果：
+
+                        \begin{minted}{matlab}
+>> [DC_stream,AC_stream,height,width] = jpeg_hide(hall_gray,QTAB,DCTAB,ACTAB,@hide2,str);
+>> [image,info] = dejpeg_extract(DC_stream,AC_stream,height,width,QTAB,DCTAB,ACTAB,@extract2);
+>> info
+
+info =
+
+Ingress Enlightened Agent @Vone 
+                        \end{minted}
+
+                        \begin{figure}[H]
+                            \centering
+                            \begin{subfigure}{0.5\textwidth}
+                                \centering
+                                \includegraphics[width=0.6\linewidth]{hall_gray_dejpeg}
+                                \caption{未隐藏信息：\texttt{hall\_gray\_dejpeg}}
+                            \end{subfigure}%
+                            \begin{subfigure}{0.5\textwidth}
+                                \centering
+                                \includegraphics[width=0.6\linewidth]{hall_gray_hide2}
+                                \caption{隐藏信息：\texttt{hall\_gray\_hide2}}
+                            \end{subfigure}
+                            \caption{\texttt{DCT}域隐藏方法\texttt{2}对图像的影响}
+                        \end{figure}
+
+                        可准确无误地提取出隐藏信息，由于分散地替换了\texttt{DCT}系数，因此不像上一种方法一样存在密集的失真现象，但仔细观察仍可发现部分色块的失真。\textbf{隐蔽性稍好}，但仍容易发现。
+
+                        \textbf{若不知道隐藏信息具体藏在哪些\texttt{DCT}系数的最低位(这里采用\texttt{magic}函数加密)，仍然很难提取出信息。}
+
+                        $$\textrm{PSNR}=34.20\textrm{dB}, r=6.27$$
+
+                    \item 先将待隐藏信息用\texttt{1,-1}的序列表示，再逐一将信息位追加在每个块\texttt{Zig-Zag}顺序的最后一个非零\texttt{DCT}系数之后；如果原本该图像块的最后一个系数就不为零，那就用信息位替换该函数。
+
+                        \textbf{隐藏函数：}
+                        \begin{listing}[H]
+                            \inputminted{matlab}{../hide3.m}
+                            \caption{\texttt{hide3.m}}
+                        \end{listing}
+
+                        \textbf{提取函数：}
+                        \inputminted{matlab}{../extract3.m}
+                        \begingroup
+                            \captionof{listing}{\texttt{extract3.m}}
+                        \endgroup
+
+                        测试结果：
+
+                        \begin{minted}{matlab}
+>> [DC_stream,AC_stream,height,width] = jpeg_hide(hall_gray,QTAB,DCTAB,ACTAB,@hide3,str);
+>> [image,info] = dejpeg_extract(DC_stream,AC_stream,height,width,QTAB,DCTAB,ACTAB,@extract3);
+>> info
+
+info =
+
+Ingress Enlightened Agent @Vone 
+                        \end{minted}
+
+                        \begin{figure}[H]
+                            \centering
+                            \begin{subfigure}{0.5\textwidth}
+                                \centering
+                                \includegraphics[width=0.6\linewidth]{hall_gray_dejpeg}
+                                \caption{未隐藏信息：\texttt{hall\_gray\_dejpeg}}
+                            \end{subfigure}%
+                            \begin{subfigure}{0.5\textwidth}
+                                \centering
+                                \includegraphics[width=0.6\linewidth]{hall_gray_hide3}
+                                \caption{隐藏信息：\texttt{hall\_gray\_hide3}}
+                            \end{subfigure}
+                            \caption{\texttt{DCT}域隐藏方法\texttt{3}对图像的影响}
+                        \end{figure}
+
+                        可准确无误地提取出隐藏信息，隐藏信息与未隐藏信息的图像肉眼无法分辨出区别，\textbf{隐蔽性较好}。
+
+                        $$\textrm{PSNR}=33.66\textrm{dB}, r=6.23$$
+
+                \end{enumerate}
+
+                \begin{table}[H]
+                    \caption{三种\texttt{DCT}域隐藏方法对比}
+                    \centering
+                
+                    \begin{tabular}{|c|c|c|c|c|}
+                    \hline
+                
+                    \hline
+                    \textbf{隐藏算法} & \textbf{隐蔽性} & \textbf{\texttt{PSNR}(dB)} & \textbf{压缩比} & \textbf{信息容纳上限(\texttt{bits})} \\
+                    \hline
+                        不隐藏 & - & 34.89 & 6.42 & - \\
+                    \hline
+                        \texttt{hide1} & 差 & 34.69 & 6.32 & \texttt{height*width} \\
+                    \hline
+                        \texttt{hide1}(接近饱和) & 极差 & 29.62 & 3.55 & \texttt{height*width} \\
+                    \hline
+                        \texttt{hide2} & 中等 & 34.20 & 6.27 & 平均值：\texttt{height*width/50} \\
+                    \hline
+                        \texttt{hide3} & 较好 & 33.66 & 6.23 & \texttt{height*width/64} \\
+                    \hline
+
+                    \hline
+                    \end{tabular}
+                \end{table}
+
+                其中上表中\texttt{hide1,hide2,hide3}隐藏的信息均为单一字符串，\texttt{hide1}(接近饱和)隐藏的信息为同样的字符串重复\texttt{50}倍。
+
+                可以看到随着信息隐藏量的增加，\textbf{方法一的效果急剧下降}。
+
+                \textbf{方法二}虽然在\texttt{PSNR}和压缩比方面不输于\textbf{方法三}(这可能得益于\textbf{\texttt{magic}函数加密})，但由于加密过程可能\textbf{增加突兀的高频分量}，因此肉眼较容易察觉。
+
+                \textbf{方法三各方面性能较为均衡，不足的是信息容纳量略低。}
+
+        \end{enumerate}
+
+    % section 信息隐藏 (end)
+
+    \newpage
+    \section{人脸检测} % (fold)
+    \label{sec:人脸检测}
+
+        
+    
+    % section 人脸检测 (end)
 
 \end{document}
