@@ -57,6 +57,13 @@
     \listoflistings
     \newpage
 
+    \section{原创性} % (fold)
+    \label{sec:原创性}
+        
+        \textbf{本次图像处理大作业由本人独立思考完成，若有雷同，纯属巧合。}
+
+    % section 原创性 (end)
+
     \section{基础知识} % (fold)
     \label{sec:基础知识}
 
@@ -375,7 +382,7 @@ ans =
                     \inputminted{matlab}{../mse.m}
                 \end{listing}
 
-                由运行代码\ref{code:c_preprocess}中得到的\texttt{mse}结果可知，在变换域减去一定直流分量与预处理原图像是\textbf{等价}的。
+                由运行代码中得到的\texttt{mse}结果可知，在变换域减去一定直流分量与预处理原图像是\textbf{等价}的。
 
             \item 根据下式\ref{eq:dct2}自行编程实现二维\texttt{DCT}：
 
@@ -1073,8 +1080,247 @@ Ingress Enlightened Agent @Vone
     \section{人脸检测} % (fold)
     \label{sec:人脸检测}
 
-        
+        \begin{enumerate}
+            \item 所给资料\href{../resource/Faces}{\texttt{Faces}}目录下包含从网图中截取的\texttt{31}张人脸，以其作为样本训练人脸标准\textbf{v}。
+
+                \begin{enumerate}
+                    \item 样本人脸大小不一，是否需要首先将图像调整为相同大小？
+
+                        \textbf{不需要。}因为区域特征表现为\textbf{各颜色占给定区域的比例}，区域的大小不影响颜色比例。
+
+                    \item 假设$L$分别取\texttt{3,4,5}，所得三个\textbf{v}之间有何关系？
+
+                        取颜色种数$M=2^{3\times L}$，则特征向量
+
+                        \begin{equation}
+                            \mathbf{u}(R)=\left[f_0(R),f_1(R),\cdots,f_{M-1}(R)\right]^\text{T}
+                        \end{equation}
+
+                        其中
+                        \[
+                            \begin{matrix*}[l]
+                                f_n(R) &= \frac{\sum_{(x,y)\in R} \delta (P_{x,y}-c(n))}{\sum_{(x,y)\in R}1} \\
+
+                                P_{x,y} &= \left[ R_{x,y}^{(8\sim 9-L)}, G_{x,y}^{(8\sim 9-L)}, B_{x,y}^{(8\sim 9-L)} \right] \\
+
+                                c(n) &= \left[ n^{(24\sim 25-L)}, n^{(16\sim 17-L)}, n^{(8\sim 9-L)} \right] \\
+                            \end{matrix*}
+                        \]
+
+                        $L$越大，颜色划分越细致；$L$越小，颜色划分越粗略。
+                        如取$L=4$，那么认为\texttt{RGB(0,0,0)}和\texttt{RGB(15,0,0)}是同一种颜色。
+
+                        \begin{listing}[H]
+                            \inputminted{matlab}{../imchar.m}
+                            \caption{\texttt{imchar.m}}
+                        \end{listing}
+
+                        \begin{listing}[H]
+                            \inputminted{matlab}{../train.m}
+                            \caption{\texttt{train.m}}
+                        \end{listing}
+
+                        颜色种数为$2^{3\times L}$时，记训练得到的标准特征为$\mathbf{v}_L$
+
+                        \begin{minted}{matlab}
+>> D = dir('resource\Faces\*.bmp');
+>> for i = 1:length(D)
+set{i} = imread(['resource\Faces\',D(i).name]);
+end
+>> v3 = train(set,3);
+>> v4 = train(set,4);
+>> v5 = train(set,5);
+                        \end{minted}
+
+                        \begin{figure}[H]
+                            \centering
+                            \includegraphics[width=\textwidth]{v}
+                            \caption{人脸标准特征(经过拉伸变换使得横轴一致方便展示)}
+                        \end{figure}
+
+                        包络相似，$L=5$的颜色分布信息更具体。
+
+                        $\mathbf{v}_{L-1}$可由$\mathbf{v}_L$导出，具体索引对应关系比较繁琐，例如：
+
+                        \begin{minted}{matlab}
+>> v3(1)
+
+ans =
+
+    0.0150
+
+>> sum(v4([1,2,17,18,257,258,273,274]))
+
+ans =
+
+    0.0150
+
+>> v3(2)
+
+ans =
+
+   1.2379e-04
+
+>> sum(v4([1,2,17,18,257,258,273,274]+2))
+
+ans =
+
+   1.2379e-04
+                        \end{minted}
+
+                \end{enumerate}
+
+            \item 设计一种从任意大小的图片中检测任意多张人脸的算法并编程实现(输出图像在判定人脸的位置加上\textcolor{red}{红色的框})。随意选取一张多人照片，对程序进行测试。尝试$L$分别取不同的值，评价检测结果有何区别。
+
+                由于人脸可能出现在图片的任何位置，而识别人脸的第一步是\textbf{固定区域}$R$，再计算待检测特征与标准特征的距离。
+
+                为了方便，我们人为地规定区域$R$是矩形或正方形，但其具体尺寸仍不确定，因为这显然与图片尺寸、拍摄角度、拍摄距离等诸多因素相关。
+
+                采用以下算法思路粗略地解决这个问题：
+
+                \begin{enumerate}
+                    \item 将图片划分为若干个小块(例如尺寸为$20\times 20$)，以较高的阈值$\epsilon_1$进行粗略人脸识别，筛选出符合条件的小块；
+                    \item 将符合条件的相邻小块合并成一个矩形；
+                    \item 将上一步得到的矩形在各自邻域进行扩展，若待检测区域的特征与标准特征的距离减小了，则保留扩展后的区域，否则舍弃这步扩展；
+                    \item 将所有区域按左下右上四个方向依次尽力扩展一轮后，以较低的阈值$\epsilon_2$再次进行匹配，得到最终识别出的人脸。
+                \end{enumerate}
+
+                \inputminted{matlab}{../face_detect.m}
+                \begingroup
+                    \captionof{listing}{\texttt{face\_detect.m}}
+                \endgroup
+
+                经过参数的调试，结果如下表
+
+                \begin{table}[H]
+                    \caption{不同参数对人脸识别效果的影响}
+                    \centering
+                
+                    \begin{tabular}{|c|c|c|c|c|c|c|}
+                    \hline
+                
+                    \hline
+                    \textbf{$L$} & \textbf{小块尺寸} & \textbf{$\epsilon_1$} & \textbf{$\epsilon_2$} & \textbf{识别结果} & 人脸识别率 & 识别错误率 \\
+                    \hline
+                        3 & 20 & 0.28 & 0.18 & 图\ref{fig:face3} & 100\% & 18.75\% \\
+                    \hline
+                        4 & 20 & 0.359 & 0.3 & 图\ref{fig:face4} & 83.33\% & 15.38\% \\
+                    \hline
+                        5 & 20 & 0.55 & 0.48 & 图\ref{fig:face5} & 75.00\% & 15.38\% \\
+                    \hline
+                
+                    \hline
+                    \end{tabular}
+                \end{table}
+
+                \begin{figure}[H]
+                    \centering
+                    \includegraphics[width=0.8\textwidth]{photo_face3}
+                    \caption{$L=3$最佳参数识别结果}
+                    \label{fig:face3}
+                \end{figure}
+
+                \begin{figure}[H]
+                    \centering
+                    \includegraphics[width=0.8\textwidth]{photo_face4}
+                    \caption{$L=4$最佳参数识别结果}
+                    \label{fig:face4}
+                \end{figure}
+
+                \begin{figure}[H]
+                    \centering
+                    \includegraphics[width=0.8\textwidth]{photo_face5}
+                    \caption{$L=5$最佳参数识别结果}
+                    \label{fig:face5}
+                \end{figure}
+
+                \textbf{分析：}
+
+                从各种参数的测试可以明显看出\textbf{基于颜色的人脸识别}的缺陷：难以将其他部位的裸露皮肤与人脸精准地区分开。可以通过优化\textbf{扩展算法}、调整参数等手段在一定程度上优化结果，但并不能根治。
+
+                \textbf{扩展算法的缺陷：}扩展顺序对结果有影响。当前算法是先尽力向左扩展，再尽力向下扩展、向右，最终尽力向上扩展。\textbf{改变扩展顺序}可能改善识别结果，可以考虑的改进是\textbf{每次扩展时选择距离缩小量最大的方向进行扩展}，听起来十分合理。
+
+                再来看当前算法下不同参数对结果的影响，出乎意料的是，特征向量的颜色种数并不是越多越好(这应该与具体算法实现以及其他参数有很大关系，\textbf{我还是相信颜色数量越多结果越好})，$L$的增大使得我们不得不\textbf{放宽两级阈值的限制}以达到更好的识别效果。
+
+                小块尺寸对结果的影响也很大，规律难以捉摸，没有体现在表中。
+
+            \item 对上述图像分别进行如下处理后，再进行识别。(取$L=3$)
+
+                \begin{enumerate}
+                    \item 顺时针旋转\texttt{90}度(\texttt{imrotate})
+
+                        \begin{figure}[H]
+                            \centering
+                            \includegraphics[width=0.8\textwidth]{photo_rotate}
+                            \caption{旋转后识别结果}
+                        \end{figure}
+
+                        理论上旋转对结果应当没有影响，但当前扩展算法的实现是和方向有关的，因此结果稍有变化，有一张脸没能检出。
+
+                    \item 保持高度不变，宽度拉伸为原来的\texttt{2}倍(\texttt{imresize})
+
+                        \begin{figure}[H]
+                            \centering
+                            \includegraphics[width=0.8\textwidth]{photo_scale}
+                            \caption{拉伸后识别结果}
+                        \end{figure}
+
+                        拉伸不但没有降低识别结果，反而检出了藏在人群后面的半张脸，这可能是由于拉伸后原来\texttt{20}的小块尺寸相当于变小了，提高了检出率。
+
+                    \item 适当改变颜色(\texttt{imadjust})
+
+                        可以预见这应当是一场灾难。
+
+                        直接使用\texttt{help imadjust}中的示例参数
+
+                        \begin{minted}{matlab}
+>> image = face_detect(imadjust(photo,[.2 .3 0; .6 .7 1],[]),3,v3,20,0.28,0.18);
+>> image = face_detect(imadjust(photo6,[.2 .3 0; .6 .7 1],[]),3,v3,20,0.6,0.6);
+                        \end{minted}
+
+                        不调整人脸检测算法参数是不可能识别出东西的，调整后终于也能识别，只不过识别出来的并没有一张人脸。
+
+                        \begin{figure}[H]
+                            \centering
+                            \includegraphics[width=0.8\textwidth]{photo_adjust}
+                            \caption{适当改变颜色后识别结果}
+                        \end{figure}
+
+                        基于颜色的人脸识别对色彩变化的灵敏度极高，稍有变化即可能对结果产生巨大影响。
+
+                \end{enumerate}
+
+            \item 如果可以重新选择人脸样本训练标准，我认为可以从以下几个方面考虑：
+
+                \begin{enumerate}
+                    \item 明确要识别的人种肤色，由此针对性地选取训练集；
+                    \item 多增加一些戴眼镜(边框明显的眼镜)样本进行训练；
+                    \item 当前提供的训练集似乎男女比例失衡严重，应当尽量选取比例均衡的训练集，虽然这可能对结果影响不大；
+                    \item 考虑将头发纳入脸部特征，这样可能可以提高该算法对人脸和皮肤的区分度，不过可能对光头或脱发人群不友好。
+                \end{enumerate}
+
+        \end{enumerate}
     
     % section 人脸检测 (end)
+
+    \newpage
+    \section{实验收获与总结} % (fold)
+    \label{sec:实验收获与总结}
+    
+        \begin{itemize}
+            \item \LaTeX{}熟练度提升飞速；
+            \item 学习到了\texttt{meshgrid}这个神奇的函数，在高维矩阵索引时挺有用的，避免了繁杂冗余且低效的\textbf{循环}，\texttt{MATLAB}友好型代码；
+            \item 一直以为\texttt{MATLAB}中没有像\texttt{python}那样的元素遍历\texttt{for element in list}方法，后来一查发现竟然也有元素遍历\texttt{for ve = v}，不过这是最后才发现的，没来得及用上；
+            \item \texttt{mat2cell}以及\texttt{cell2mat}灵活转换，极大减少某些矩阵操作的代码量，但矩阵过大时，\texttt{mat2cell}的效率似乎会急剧下降；
+            \item 尽量不要把\texttt{load}等文件读取操作放在函数体里执行，这样会大幅降低函数运行效率；
+            \item 粗略了解了\texttt{JPEG}编解码原理；
+            \item 粗略掌握了在\texttt{DCT}域隐藏少量信息的方法，可以表白用(但表白对象仅限电子系大二以上学生)；
+            \item \texttt{DCT}域隐藏信息时使用\texttt{magic(10)}加密索引号，增加了隐蔽性；
+            \item 将二进制信息隐藏在可能是负数的系数最低位时不必机械地将负数用补码表示，从奇偶性入手，编解码都方便；
+            \item 人脸识别的实现感觉比较失败，算法没有经过充分的优化(而且有大段重复的代码，没有很好的复用，风格不佳)，参数也似乎没有调试至最佳状态，算法的具体优化办法在相应部分已经陈述过，不再赘述；
+            \item 基于颜色和形状特征的人脸识别应该可以有效地区分人脸和其他皮肤。
+        \end{itemize}
+
+    % section 实验收获与总结 (end)
 
 \end{document}
